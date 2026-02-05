@@ -1,6 +1,6 @@
 import { eq, ilike, or, and, desc, sql, getTableColumns } from "drizzle-orm"
 import express from "express";
-import { products, categories } from "../db/schema";
+import { products, categories, suppliers, uom } from "../db/schema";
 import { db } from "../db";
 
 const router = express.Router();
@@ -31,7 +31,7 @@ router.get('/', async (req, res) => {
         //Combine all filters using AND if any exists
         const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
 
-        
+        // Count total for pagination
         const countResult = await db
             .select({ count: sql<number>`count(*)` })
             .from(products)
@@ -40,16 +40,22 @@ router.get('/', async (req, res) => {
 
         const totalCount = countResult[0] ?.count ?? 0;
 
+        // Get product list including category, supplier, and uom
         const productsList = await db
-        .select({ 
-            ...getTableColumns(products), 
-            category: { ...getTableColumns(categories)}
-        })
-        .from(products)
-        .leftJoin(categories, eq(products.categoryId, categories.id))
-        .where(whereClause).orderBy(desc(products.createdAt))
-        .limit(limitPerPage)
-        .offset(offset);
+        .select({
+                ...getTableColumns(products),
+                category: { ...getTableColumns(categories) },
+                supplier: { ...getTableColumns(suppliers) }, // include supplier
+                uom: { ...getTableColumns(uom) }, // include uom
+            })
+            .from(products)
+            .leftJoin(categories, eq(products.categoryId, categories.id))
+            .leftJoin(suppliers, eq(products.supplierId, suppliers.id)) // join supplier
+            .leftJoin(uom, eq(products.uomId, uom.id)) // join uom
+            .where(whereClause)
+            .orderBy(desc(products.createdAt))
+            .limit(limitPerPage)
+            .offset(offset);
 
         res.status(200).json({
             data: productsList,
