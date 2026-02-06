@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, varchar, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, varchar, integer, numeric, timestamp } from "drizzle-orm/pg-core";
 
 const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -19,6 +19,7 @@ export const products = pgTable('products', {
    categoryId: integer("category_id").notNull().references(() => categories.id, { onDelete: 'restrict'}),
    supplierId: integer("supplier_id").notNull().references(() => suppliers.id, { onDelete: 'restrict'}),
   uomId: integer("uom_id").notNull().references(() => uom.id, { onDelete: 'restrict'}),
+   price: numeric("price", { precision: 12, scale: 2 }),
    pkg: integer("pkg").notNull(),
    barcode: varchar("barcode", { length: 255 }),
   ...timestamps,

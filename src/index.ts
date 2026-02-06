@@ -15,7 +15,7 @@ if (!process.env.FRONTEND_URL) {
 app.use(
   cors({
     origin: process.env.FRONTEND_URL || false, // Disable CORS if not configured
-    methods: ["GET", "POST", "PUT", "DELETE"], // Specify allowed HTTP methods
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"], // Specify allowed HTTP methods
     credentials: true, // allow cookies
   })
 );
