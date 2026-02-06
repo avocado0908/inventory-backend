@@ -2,6 +2,7 @@ import express from 'express';
 import subjectsRouter from './routes/products';
 import suppliersRouter from "./routes/suppliers";
 import categoriesRouter from "./routes/categories";
+import uomRouter from "./routes/uom";
 import cors from "cors";
 
 const app = express();
@@ -23,6 +24,7 @@ app.use(express.json());
 app.use('/api/products', subjectsRouter)
 app.use('/api/categories', categoriesRouter)
 app.use('/api/suppliers', suppliersRouter)
+app.use('/api/uom', uomRouter)
 
 app.get ('/', (req, res) => {
     res.send('Hello, welcome to the Stocktake API');

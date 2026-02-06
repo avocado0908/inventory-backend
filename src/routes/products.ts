@@ -71,6 +71,120 @@ router.get('/', async (req, res) => {
         console.error(`GET /products error: ${e}`);
         res.status(500).json({ error: 'Failed to get products' });
     }
-})
+});
+
+/* =========================
+   POST /products (create)
+========================= */
+router.post("/", async (req, res) => {
+  try {
+    const {
+      name,
+      categoryId,
+      supplierId,
+      uomId,
+      pkg,
+      barcode,
+    } = req.body;
+
+    const categoryIdNum = Number(categoryId);
+    const supplierIdNum = Number(supplierId);
+    const uomIdNum = Number(uomId);
+    const pkgNum = Number(pkg);
+
+    if (
+      !name ||
+      !Number.isInteger(categoryIdNum) || categoryIdNum <= 0 ||
+      !Number.isInteger(supplierIdNum) || supplierIdNum <= 0 ||
+      !Number.isInteger(uomIdNum) || uomIdNum <= 0 ||
+      !Number.isInteger(pkgNum) || pkgNum <= 0
+    ) {
+      return res.status(400).json({
+        error: "Missing required fields",
+      });
+    }
+
+    const [createdProduct] = await db
+      .insert(products)
+      .values({
+        name: String(name),
+        categoryId: categoryIdNum,
+        supplierId: supplierIdNum,
+        uomId: uomIdNum,
+        pkg: pkgNum,
+        barcode: barcode ?? null,
+      })
+      .returning();
+
+    res.status(201).json({
+      data: createdProduct,
+    });
+  } catch (e) {
+    console.error("POST /products error:", e);
+    res.status(500).json({
+      error: "Failed to create product",
+    });
+  }
+});
+
+
+/* =========================
+   PUT /products/:id (update)
+========================= */
+router.put("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Invalid id" });
+    }
+    const {
+      name,
+      categoryId,
+      supplierId,
+      uomId,
+      pkg,
+      barcode,
+    } = req.body;
+
+    const updated = await db
+      .update(products)
+      .set({
+        name,
+        categoryId,
+        supplierId,
+        uomId,
+        pkg,
+        barcode,
+      })
+      .where(eq(products.id, id))
+      .returning({ id: products.id });
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error("PUT /products/:id error:", e);
+    res.status(500).json({ error: "Failed to update product" });
+  }
+});
+
+/* =========================
+   DELETE /products/:id
+========================= */
+router.delete("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    await db.delete(products).where(eq(products.id, id));
+
+    res.json({ success: true });
+  } catch (e) {
+    console.error("DELETE /products/:id error:", e);
+    res.status(500).json({ error: "Failed to delete product" });
+  }
+});
+
 
 export default router;
