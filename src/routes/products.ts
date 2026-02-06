@@ -5,125 +5,136 @@ import { db } from "../db";
 
 const router = express.Router();
 
-router.get('/', async (req, res) => {
-    try{
-        const { search, category, page, limit } = req.query;
+router.get("/", async (req, res) => {
+  try {
+    const { search, category, page, limit } = req.query;
 
-        const currentPage = Math.max(1, Number(page) || 1);
-        const limitPerPage = Math.max(1, Math.min(100, Number(limit) || 10));
+    const currentPage = Math.max(1, Number(page) || 1);
+    const limitPerPage = Math.max(1, Math.min(100, Number(limit) || 10));
+    const offset = (currentPage - 1) * limitPerPage;
 
-        const offset = (currentPage - 1) * limitPerPage;
+    const filterConditions = [];
 
-        const filterConditions = [];
-
-        //If search query exists, filter by product name
-        if(search) {
-            filterConditions.push(
-                    ilike(products.name , `%${search}%`),                
-            )
-        }
-
-        //If category filter exists, match category name
-        if (category) {
-            filterConditions.push(ilike(categories.name,`%${category}%`));
-        }
-        
-        //Combine all filters using AND if any exists
-        const whereClause = filterConditions.length > 0 ? and(...filterConditions) : undefined;
-
-        // Count total for pagination
-        const countResult = await db
-            .select({ count: sql<number>`count(*)` })
-            .from(products)
-            .leftJoin(categories, eq(products.categoryId, categories.id))
-            .where(whereClause);
-
-        const totalCount = countResult[0] ?.count ?? 0;
-
-        // Get product list including category, supplier, and uom
-        const productsList = await db
-        .select({
-                ...getTableColumns(products),
-                category: { ...getTableColumns(categories) },
-                supplier: { ...getTableColumns(suppliers) }, // include supplier
-                uom: { ...getTableColumns(uom) }, // include uom
-            })
-            .from(products)
-            .leftJoin(categories, eq(products.categoryId, categories.id))
-            .leftJoin(suppliers, eq(products.supplierId, suppliers.id)) // join supplier
-            .leftJoin(uom, eq(products.uomId, uom.id)) // join uom
-            .where(whereClause)
-            .orderBy(desc(products.createdAt))
-            .limit(limitPerPage)
-            .offset(offset);
-
-        res.status(200).json({
-            data: productsList,
-            pagination: {
-                page: currentPage,
-                limit: limitPerPage,
-                total: totalCount,
-                totalPages: Math.ceil(totalCount / limitPerPage),
-            },
-        });
-
-    }catch (e) {
-        console.error(`GET /products error: ${e}`);
-        res.status(500).json({ error: 'Failed to get products' });
+    if (search) {
+      filterConditions.push(ilike(products.name, `%${search}%`));
     }
+
+    if (category) {
+      const categoryId = Number(category);
+      if (!Number.isNaN(categoryId)) {
+        filterConditions.push(eq(products.categoryId, categoryId));
+      } else {
+        filterConditions.push(ilike(categories.name, `%${category}%`));
+      }
+    }
+
+    const whereClause =
+      filterConditions.length > 0 ? and(...filterConditions) : undefined;
+
+    const countResult = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(products)
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .where(whereClause);
+
+    const totalCount = countResult[0]?.count ?? 0;
+
+    const productsList = await db
+      .select({
+        ...getTableColumns(products),
+        category: { ...getTableColumns(categories) },
+        supplier: { ...getTableColumns(suppliers) },
+        uom: { ...getTableColumns(uom) },
+      })
+      .from(products)
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .leftJoin(suppliers, eq(products.supplierId, suppliers.id))
+      .leftJoin(uom, eq(products.uomId, uom.id))
+      .where(whereClause)
+      .orderBy(desc(products.createdAt))
+      .limit(limitPerPage)
+      .offset(offset);
+
+    res.status(200).json({
+      data: productsList,
+      pagination: {
+        page: currentPage,
+        limit: limitPerPage,
+        total: totalCount,
+        totalPages: Math.ceil(totalCount / limitPerPage),
+      },
+    });
+  } catch (e) {
+    console.error(`GET /products error:`, e);
+    res.status(500).json({ error: "Failed to get products" });
+  }
 });
 
 /* =========================
    POST /products (create)
 ========================= */
 router.post("/", async (req, res) => {
+    try {
+        const { name, categoryId, supplierId, uomId, pkg, barcode, price } = req.body;
+
+        // Basic validation (important for NOT NULL columns)
+        if (!name || !categoryId || !supplierId || !uomId || pkg === undefined) {
+            return res.status(400).json({
+                error: "Missing required fields",
+            });
+        }
+
+        const [createdProduct] = await db
+            .insert(products)
+            .values({
+                name: String(name),
+                categoryId: Number(categoryId),
+                supplierId: Number(supplierId),
+                uomId: Number(uomId),
+                pkg: Number(pkg),
+                barcode: barcode ?? null,
+                price: price !== undefined ? Number(price) : null,
+            })
+            .returning();
+
+        res.status(201).json({
+            data: createdProduct,
+        });
+    } catch (e) {
+        console.error("POST /products error:", e);
+        res.status(500).json({
+            error: "Failed to create product",
+        });
+    }
+});
+
+
+// GET /products/:id
+router.get("/:id", async (req, res) => {
   try {
-    const {
-      name,
-      categoryId,
-      supplierId,
-      uomId,
-      pkg,
-      barcode,
-    } = req.body;
+    const { id } = req.params;
 
-    const categoryIdNum = Number(categoryId);
-    const supplierIdNum = Number(supplierId);
-    const uomIdNum = Number(uomId);
-    const pkgNum = Number(pkg);
+    const [product] = await db
+      .select({
+        ...getTableColumns(products),
+        category: { ...getTableColumns(categories) },
+        supplier: { ...getTableColumns(suppliers) },
+        uom: { ...getTableColumns(uom) },
+      })
+      .from(products)
+      .leftJoin(categories, eq(products.categoryId, categories.id))
+      .leftJoin(suppliers, eq(products.supplierId, suppliers.id))
+      .leftJoin(uom, eq(products.uomId, uom.id))
+      .where(eq(products.id, Number(id)));
 
-    if (
-      !name ||
-      !Number.isInteger(categoryIdNum) || categoryIdNum <= 0 ||
-      !Number.isInteger(supplierIdNum) || supplierIdNum <= 0 ||
-      !Number.isInteger(uomIdNum) || uomIdNum <= 0 ||
-      !Number.isInteger(pkgNum) || pkgNum <= 0
-    ) {
-      return res.status(400).json({
-        error: "Missing required fields",
-      });
+    if (!product) {
+      return res.status(404).json({ error: "Product not found" });
     }
 
-    const [createdProduct] = await db
-      .insert(products)
-      .values({
-        name: String(name),
-        categoryId: categoryIdNum,
-        supplierId: supplierIdNum,
-        uomId: uomIdNum,
-        pkg: pkgNum,
-        barcode: barcode ?? null,
-      })
-      .returning();
-
-    res.status(201).json({
-      data: createdProduct,
-    });
+    res.status(200).json({ data: product });
   } catch (e) {
-    console.error("POST /products error:", e);
-    res.status(500).json({
-      error: "Failed to create product",
-    });
+    console.error(`GET /products/:id error:`, e);
+    res.status(500).json({ error: "Failed to get product" });
   }
 });
 
@@ -132,40 +143,53 @@ router.post("/", async (req, res) => {
    PUT /products/:id (update)
 ========================= */
 router.put("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, categoryId, supplierId, uomId, pkg, barcode, price } = req.body;
+
   try {
-    const id = Number(req.params.id);
-    if (!Number.isInteger(id) || id <= 0) {
-      return res.status(400).json({ error: "Invalid id" });
-    }
-    const {
-      name,
-      categoryId,
-      supplierId,
-      uomId,
-      pkg,
-      barcode,
-    } = req.body;
-
-    const updated = await db
+    const [updatedProduct] = await db
       .update(products)
-      .set({
-        name,
-        categoryId,
-        supplierId,
-        uomId,
-        pkg,
-        barcode,
-      })
-      .where(eq(products.id, id))
-      .returning({ id: products.id });
+      .set({ name, categoryId, supplierId, uomId, pkg, barcode, price })
+      .where(eq(products.id, Number(id)))
+      .returning();
 
-    if (updated.length === 0) {
-      return res.status(404).json({ error: "Product not found" });
+    res.status(200).json({ data: updatedProduct });
+  } catch (error) {
+    console.error("PUT /products/:id error:", error);
+    res.status(500).json({ error: "Failed to update product" });
+  }
+});
+
+/* =========================
+   PATCH /products/:id (update)
+========================= */
+router.patch("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, categoryId, supplierId, uomId, pkg, barcode, price } = req.body;
+
+  try {
+    const updateData: Partial<typeof products.$inferInsert> = {};
+    if (name !== undefined) updateData.name = name;
+    if (categoryId !== undefined) updateData.categoryId = categoryId;
+    if (supplierId !== undefined) updateData.supplierId = supplierId;
+    if (uomId !== undefined) updateData.uomId = uomId;
+    if (pkg !== undefined) updateData.pkg = pkg;
+    if (barcode !== undefined) updateData.barcode = barcode;
+    if (price !== undefined) updateData.price = price;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
     }
 
-    res.json({ success: true });
-  } catch (e) {
-    console.error("PUT /products/:id error:", e);
+    const [updatedProduct] = await db
+      .update(products)
+      .set(updateData)
+      .where(eq(products.id, Number(id)))
+      .returning();
+
+    res.status(200).json({ data: updatedProduct });
+  } catch (error) {
+    console.error("PATCH /products/:id error:", error);
     res.status(500).json({ error: "Failed to update product" });
   }
 });

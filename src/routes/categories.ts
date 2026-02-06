@@ -57,4 +57,75 @@ router.get("/", async (req, res) => {
   }
 });
 
+/* =========================
+   POST /categories (create)
+========================= */
+router.post("/", async (req, res) => {
+  try {
+    const { name, description } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const [createdCategory] = await db
+      .insert(categories)
+      .values({
+        name: String(name),
+        description: description ?? null,
+      })
+      .returning();
+
+    res.status(201).json({ data: createdCategory });
+  } catch (error) {
+    console.error("POST /categories error:", error);
+    res.status(500).json({ error: "Failed to create category" });
+  }
+});
+
+/* =========================
+   PATCH /categories/:id (update)
+========================= */
+router.patch("/:id", async (req, res) => {
+  const { id } = req.params;
+  const { name, description } = req.body;
+
+  try {
+    const updateData: Partial<typeof categories.$inferInsert> = {};
+    if (name !== undefined) updateData.name = name;
+    if (description !== undefined) updateData.description = description;
+
+    if (Object.keys(updateData).length === 0) {
+      return res.status(400).json({ error: "No fields to update" });
+    }
+
+    const [updatedCategory] = await db
+      .update(categories)
+      .set(updateData)
+      .where(eq(categories.id, Number(id)))
+      .returning();
+
+    res.status(200).json({ data: updatedCategory });
+  } catch (error) {
+    console.error("PATCH /categories/:id error:", error);
+    res.status(500).json({ error: "Failed to update category" });
+  }
+});
+
+/* =========================
+   DELETE /categories/:id
+========================= */
+router.delete("/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+
+    await db.delete(categories).where(eq(categories.id, id));
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("DELETE /categories/:id error:", error);
+    res.status(500).json({ error: "Failed to delete category" });
+  }
+});
+
 export default router;
