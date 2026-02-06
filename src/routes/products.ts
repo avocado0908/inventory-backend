@@ -87,13 +87,17 @@ router.post("/", async (req, res) => {
       barcode,
     } = req.body;
 
-    // Basic validation (important for NOT NULL columns)
+    const categoryIdNum = Number(categoryId);
+    const supplierIdNum = Number(supplierId);
+    const uomIdNum = Number(uomId);
+    const pkgNum = Number(pkg);
+
     if (
       !name ||
-      !categoryId ||
-      !supplierId ||
-      !uomId ||
-      pkg === undefined
+      !Number.isInteger(categoryIdNum) || categoryIdNum <= 0 ||
+      !Number.isInteger(supplierIdNum) || supplierIdNum <= 0 ||
+      !Number.isInteger(uomIdNum) || uomIdNum <= 0 ||
+      !Number.isInteger(pkgNum) || pkgNum <= 0
     ) {
       return res.status(400).json({
         error: "Missing required fields",
@@ -104,10 +108,10 @@ router.post("/", async (req, res) => {
       .insert(products)
       .values({
         name: String(name),
-        categoryId: Number(categoryId),
-        supplierId: Number(supplierId),
-        uomId: Number(uomId),
-        pkg: Number(pkg),
+        categoryId: categoryIdNum,
+        supplierId: supplierIdNum,
+        uomId: uomIdNum,
+        pkg: pkgNum,
         barcode: barcode ?? null,
       })
       .returning();
@@ -130,7 +134,9 @@ router.post("/", async (req, res) => {
 router.put("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ error: "Invalid id" });
+    }
     const {
       name,
       categoryId,
@@ -140,7 +146,7 @@ router.put("/:id", async (req, res) => {
       barcode,
     } = req.body;
 
-    await db
+    const updated = await db
       .update(products)
       .set({
         name,
@@ -150,7 +156,12 @@ router.put("/:id", async (req, res) => {
         pkg,
         barcode,
       })
-      .where(eq(products.id, id));
+      .where(eq(products.id, id))
+      .returning({ id: products.id });
+
+    if (updated.length === 0) {
+      return res.status(404).json({ error: "Product not found" });
+    }
 
     res.json({ success: true });
   } catch (e) {
