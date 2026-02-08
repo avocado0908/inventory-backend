@@ -3,6 +3,11 @@ import subjectsRouter from './routes/products';
 import suppliersRouter from "./routes/suppliers";
 import categoriesRouter from "./routes/categories";
 import uomRouter from "./routes/uom";
+import branchesRouter from "./routes/branches";
+import stockcountRouter from "./routes/stockcount";
+import branchAssignmentsRouter from "./routes/branch-assignments";
+import monthlyInventoryRouter from "./routes/monthly-inventory";
+
 import cors from "cors";
 
 const app = express();
@@ -25,6 +30,11 @@ app.use('/api/products', subjectsRouter)
 app.use('/api/categories', categoriesRouter)
 app.use('/api/suppliers', suppliersRouter)
 app.use('/api/uom', uomRouter)
+app.use('/api/branches', branchesRouter)
+app.use('/api/stockcount', stockcountRouter)
+app.use('/api/branch-assignments', branchAssignmentsRouter)
+app.use('/api/monthly-inventory', monthlyInventoryRouter)
+
 
 app.get ('/', (req, res) => {
     res.send('Hello, welcome to the Stocktake API');

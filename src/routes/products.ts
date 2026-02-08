@@ -16,7 +16,12 @@ router.get("/", async (req, res) => {
     const filterConditions = [];
 
     if (search) {
-      filterConditions.push(ilike(products.name, `%${search}%`));
+      filterConditions.push(
+        or(
+          ilike(products.name, `%${search}%`),
+          ilike(products.barcode, `%${search}%`)
+        )
+      );
     }
 
     if (category) {
