@@ -6,7 +6,7 @@ import uomRouter from "./routes/uom";
 import branchesRouter from "./routes/branches";
 import stockcountRouter from "./routes/stockcount";
 import branchAssignmentsRouter from "./routes/branch-assignments";
-import montlyInventorysRouter from "./routes/montlyInventorys";
+import monthlyInventoryRouter from "./routes/monthly-inventory";
 
 import cors from "cors";
 
@@ -33,7 +33,7 @@ app.use('/api/uom', uomRouter)
 app.use('/api/branches', branchesRouter)
 app.use('/api/stockcount', stockcountRouter)
 app.use('/api/branch-assignments', branchAssignmentsRouter)
-app.use('/api/montlyInventorys', montlyInventorysRouter)
+app.use('/api/monthly-inventory', monthlyInventoryRouter)
 
 
 app.get ('/', (req, res) => {

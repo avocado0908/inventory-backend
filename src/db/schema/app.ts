@@ -65,7 +65,10 @@ export const branchAssignments = pgTable('branch_assignments', {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   name: varchar("name", { length: 255 }).notNull(),
   assignedMonth: date("assigned_month").notNull(),
-  branchId: integer("branch_id").notNull().references(() => branches.id, { onDelete: 'restrict' }),
+  branchId: integer("branch_id")
+    .notNull()
+    .references(() => branches.id, { onDelete: 'restrict' })
+    .unique(),
   status: branchAssignmentStatus("status")
     .notNull()
     .default("not started"),
@@ -103,7 +106,7 @@ export const uomRelations = relations(uom, ({ many }) => ({
 }));
 
 export const branchesRelations = relations(branches, ({ many }) => ({
-  monthlyInventory: many(monthlyInventory),
+  branchAssignments: many(branchAssignments)
 }));
 
 export const monthlyInventoryRelations = relations(monthlyInventory, ({ one }) => ({
@@ -111,9 +114,9 @@ export const monthlyInventoryRelations = relations(monthlyInventory, ({ one }) =
     fields: [monthlyInventory.productId],
     references: [products.id],
   }),
-  branch: one(branches, {
+  branchAssignment: one(branchAssignments, {
     fields: [monthlyInventory.branchAssignmentId],
-    references: [branches.id],
+    references: [branchAssignments.id],
   }),
 }));
 
