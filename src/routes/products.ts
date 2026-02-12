@@ -98,7 +98,7 @@ router.post("/", async (req, res) => {
                 uomId: Number(uomId),
                 pkg: Number(pkg),
                 barcode: barcode ?? null,
-                price: price !== undefined ? Number(price) : null,
+                price: price !== undefined && price !== null ? String(price) : null,
             })
             .returning();
 
@@ -154,7 +154,15 @@ router.put("/:id", async (req, res) => {
   try {
     const [updatedProduct] = await db
       .update(products)
-      .set({ name, categoryId, supplierId, uomId, pkg, barcode, price })
+      .set({
+        name,
+        categoryId,
+        supplierId,
+        uomId,
+        pkg,
+        barcode,
+        price: price !== undefined && price !== null ? String(price) : null,
+      })
       .where(eq(products.id, Number(id)))
       .returning();
 
@@ -180,7 +188,9 @@ router.patch("/:id", async (req, res) => {
     if (uomId !== undefined) updateData.uomId = uomId;
     if (pkg !== undefined) updateData.pkg = pkg;
     if (barcode !== undefined) updateData.barcode = barcode;
-    if (price !== undefined) updateData.price = price;
+    if (price !== undefined) {
+      updateData.price = price === null ? null : String(price);
+    }
 
     if (Object.keys(updateData).length === 0) {
       return res.status(400).json({ error: "No fields to update" });

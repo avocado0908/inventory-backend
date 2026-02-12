@@ -4,9 +4,10 @@ import suppliersRouter from "./routes/suppliers";
 import categoriesRouter from "./routes/categories";
 import uomRouter from "./routes/uom";
 import branchesRouter from "./routes/branches";
-import stockcountRouter from "./routes/stockcount";
-import branchAssignmentsRouter from "./routes/branch-assignments";
 import monthlyInventoryRouter from "./routes/monthly-inventory";
+import branchAssignmentsRouter from "./routes/branch-assignments";
+import stocktakeSummariesRouter from "./routes/stocktake-summaries";
+
 
 import cors from "cors";
 
@@ -31,9 +32,9 @@ app.use('/api/categories', categoriesRouter)
 app.use('/api/suppliers', suppliersRouter)
 app.use('/api/uom', uomRouter)
 app.use('/api/branches', branchesRouter)
-app.use('/api/stockcount', stockcountRouter)
-app.use('/api/branch-assignments', branchAssignmentsRouter)
 app.use('/api/monthly-inventory', monthlyInventoryRouter)
+app.use('/api/branch-assignments', branchAssignmentsRouter)
+app.use('/api/stocktake-summaries', stocktakeSummariesRouter)
 
 
 app.get ('/', (req, res) => {

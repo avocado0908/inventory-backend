@@ -1,7 +1,7 @@
 import express from "express";
 import { db } from "../db";
 import { branchAssignments } from "../db/schema";
-import { and, eq, ilike, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const router = express.Router();
 
@@ -56,18 +56,19 @@ router.post("/", async (req, res) => {
         branchId: Number(branchId),
         assignedMonth: normalizedMonth,
       })
-      .onConflictDoUpdate({
-        target: [branchAssignments.branchId],
-        set: {
-          name: String(name),
-          assignedMonth: normalizedMonth,
-        },
-      })
       .returning();
 
     res.status(201).json({ data: created });
   } catch (error) {
     console.error("POST /branch-assignments error:", error);
+    const dbError = error as { code?: string; constraint?: string };
+    if (dbError?.code === "23505") {
+      const message =
+        dbError.constraint === "unique_branch_month"
+          ? "Branch assignment already exists for this month."
+          : "Branch assignment already exists.";
+      return res.status(500).json({ error: message });
+    }
     res.status(500).json({ error: "Failed to create branch assignment" });
   }
 });
@@ -78,7 +79,7 @@ router.post("/", async (req, res) => {
 router.patch("/:id", async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { name, branchId, assignedMonth } = req.body;
+    const { name, branchId, assignedMonth, status } = req.body;
 
     const updateData: Partial<typeof branchAssignments.$inferInsert> = {};
     if (name !== undefined) updateData.name = name;
@@ -88,6 +89,13 @@ router.patch("/:id", async (req, res) => {
       if (normalizedMonth) {
         updateData.assignedMonth = normalizedMonth;
       }
+    }
+    if (status !== undefined) {
+      const allowedStatus = ["not started", "in progress", "done"] as const;
+      if (!allowedStatus.includes(status)) {
+        return res.status(400).json({ error: "Invalid status" });
+      }
+      updateData.status = status;
     }
 
     if (!Object.keys(updateData).length) {

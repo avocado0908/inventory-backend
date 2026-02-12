@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { pgTable, varchar, integer, numeric, timestamp, date, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, varchar, integer, numeric, timestamp, date, pgEnum, jsonb } from "drizzle-orm/pg-core";
 
 const timestamps = {
     createdAt: timestamp('created_at').defaultNow().notNull(),
@@ -50,7 +50,7 @@ export const branches = pgTable('branches', {
 export const monthlyInventory = pgTable('monthly_inventory', {
   id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
   productId: integer("product_id").notNull().references(() => products.id, { onDelete: 'restrict' }),
-  branchAssignmentId: integer("branch_assignments_id").notNull().references(() => branchAssignments.id, { onDelete: 'restrict' }),
+  branchAssignmentsId: integer("branch_assignments_id").notNull().references(() => branchAssignments.id, { onDelete: 'restrict' }),
   quantity: integer("quantity").notNull(),
   stockValue: numeric("stock_value", { precision: 12, scale: 2 }),
   updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull()
@@ -71,11 +71,21 @@ export const branchAssignments = pgTable('branch_assignments', {
     .unique(),
   status: branchAssignmentStatus("status")
     .notNull()
-    .default("not started"),
+    .default("in progress"),
   assignedAt: timestamp('assigned_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().$onUpdate(() => new Date()).notNull()
 });
 
+export const stocktakeSummaries = pgTable("stocktake_summaries", {
+  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  branchAssignmentId: integer("branch_assignment_id")
+    .notNull()
+    .references(() => branchAssignments.id, { onDelete: "cascade" })
+    .unique(),
+  grandTotal: numeric("grand_total", { precision: 12, scale: 2 }).notNull(),
+  totalsByCategory: jsonb("totals_by_category").notNull(),
+  ...timestamps,
+});
 export const productsRelations = relations(products, ({ one }) => ({
   category: one(categories, {
     fields: [products.categoryId],
@@ -115,7 +125,7 @@ export const monthlyInventoryRelations = relations(monthlyInventory, ({ one }) =
     references: [products.id],
   }),
   branchAssignment: one(branchAssignments, {
-    fields: [monthlyInventory.branchAssignmentId],
+    fields: [monthlyInventory.branchAssignmentsId],
     references: [branchAssignments.id],
   }),
 }));
@@ -124,6 +134,13 @@ export const branchAssignmentsRelations = relations(branchAssignments, ({ one })
   branch: one(branches, {
     fields: [branchAssignments.branchId],
     references: [branches.id],
+  }),
+}));
+
+export const stocktakeSummariesRelations = relations(stocktakeSummaries, ({ one }) => ({
+  branchAssignment: one(branchAssignments, {
+    fields: [stocktakeSummaries.branchAssignmentId],
+    references: [branchAssignments.id],
   }),
 }));
 
@@ -148,3 +165,6 @@ export type NewMonthlyInventory = typeof monthlyInventory.$inferInsert;
 
 export type BranchAssignments = typeof branchAssignments.$inferSelect;
 export type NewBranchAssignments = typeof branchAssignments.$inferInsert;
+
+export type StocktakeSummary = typeof stocktakeSummaries.$inferSelect;
+export type NewStocktakeSummary = typeof stocktakeSummaries.$inferInsert;
