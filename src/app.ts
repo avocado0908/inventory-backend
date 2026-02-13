@@ -11,13 +11,27 @@ import stocktakeSummariesRouter from "./routes/stocktake-summaries";
 
 const app = express();
 
-if (!process.env.FRONTEND_URL) {
-  console.warn("Warning: FRONTEND_URL is not set. CORS will be restrictive.");
+const allowedOrigins = (process.env.FRONTEND_URL ?? "")
+  .split(",")
+  .map((origin) => origin.trim().replace(/\/$/, ""))
+  .filter(Boolean);
+
+if (allowedOrigins.length === 0) {
+  console.warn("Warning: FRONTEND_URL is not set. CORS will block browser requests.");
 }
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || false,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+
+      const normalizedOrigin = origin.replace(/\/$/, "");
+      if (allowedOrigins.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+
+      return callback(new Error(`CORS blocked for origin: ${origin}`));
+    },
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     credentials: true,
   })
