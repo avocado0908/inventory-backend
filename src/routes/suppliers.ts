@@ -60,7 +60,7 @@ router.get("/", async (req, res) => {
 ========================= */
 router.post("/", async (req, res) => {
   try {
-    const { name, contactName, email, phone } = req.body;
+    const { name, contactName, email, phone, website } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: "Supplier name is required" });
@@ -73,6 +73,7 @@ router.post("/", async (req, res) => {
         contactName: contactName ?? null,
         email: email ?? null,
         phone: phone ?? null,
+        website: website ?? null,
       })
       .returning();
 
@@ -88,7 +89,7 @@ router.post("/", async (req, res) => {
 ========================= */
 router.patch("/:id", async (req, res) => {
   const { id } = req.params;
-  const { name, contactName, email, phone } = req.body;
+  const { name, contactName, email, phone, website } = req.body;
 
   try {
     const updateData: Partial<typeof suppliers.$inferInsert> = {};
@@ -97,6 +98,7 @@ router.patch("/:id", async (req, res) => {
     if (contactName !== undefined) updateData.contactName = contactName;
     if (email !== undefined) updateData.email = email;
     if (phone !== undefined) updateData.phone = phone;
+    if (website !== undefined) updateData.website = website;
 
     if (!Object.keys(updateData).length) {
       return res.status(400).json({ error: "No fields to update" });

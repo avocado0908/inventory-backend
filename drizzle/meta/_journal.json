@@ -43,6 +43,13 @@
       "when": 1770460639053,
       "tag": "0005_smart_living_tribunal",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1771058499843,
+      "tag": "0006_careless_boomerang",
+      "breakpoints": true
     }
   ]
 }
